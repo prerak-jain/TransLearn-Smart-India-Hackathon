@@ -87,53 +87,167 @@
 
 // export default Highlighter;
 
-import React, { useState, useEffect, Fragment } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  Fragment,
+} from "react";
 import axios from "axios";
 import { Button } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
+// import FileInput from "./FileInput";
 import pdf from "./SDE-PROBLEMS.pdf";
 import pdf2 from "./XDShortcuts.pdf";
 
 function Highlighter() {
   const pdfs = [pdf, pdf2];
   const [files, setFiles] = useState([]);
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const isMounted = useRef(true);
+  const fileInput = useRef(null);
+
+  // set isMounted to false when we unmount the component
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
-    console.log("inside useeffect");
-    let filesData = new FormData();
-    filesData.append("files", "./SDE-PROBLEMS.pdf");
-    filesData.append("files", "./XDShortcuts.pdf");
-    filesData.append("ratio", "0.1");
-    // let reqOptions = {
-    //   method: "POST",
-    //   body: filesData,
-    //   redirect: "follow",
-    // };
-    axios({
-      method: "post",
-      headers: { "Content-Type": undefined },
-      url: "https://translearn-check.herokuapp.com/highlight",
-      data: filesData,
-    })
-      .then((res) => {
-        console.log("then block entered.........got some response");
-        console.log(res);
-        console.log("then finished..........got response");
-      })
-      .catch((err) => console.log(err));
-    // fetch("https://translearn-check.herokuapp.com/highlight", reqOptions)
-    //   .then((response) => response.text())
-    //   .then((result) => console.log(result))
-    //   .catch((error) => console.log("error", error));
+    console.log("initial useEffect on render faltu....");
   }, []);
+
+  const getUploadedFiles = () => {
+    console.log("inside get uploaded files");
+
+    const filesObj = fileInput.current.files;
+    if (Object.keys(filesObj).length === 0) {
+      return null;
+    }
+
+    const filesData = new FormData();
+    let numberOfFiles = filesObj.length;
+
+    for (let file = 0; file < numberOfFiles; file++) {
+      filesData.append("files", filesObj[file]);
+    }
+
+    filesData.append("ratio", "0.1");
+    console.log("endof getUploadedFiles function");
+    return filesData;
+  };
+
+  const onSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      console.log("inside usecallback onsubmit vala");
+      if (isSendingRequest) {
+        console.log("already sending req");
+        return;
+      }
+      let filesData = getUploadedFiles();
+      if (filesData === null) {
+        alert("no files selected");
+        return;
+      }
+      console.log("filesData in useCallback - ", filesData); // check the format
+      setIsSendingRequest(true);
+      console.log("sending request set to true....");
+
+      await axios({
+        method: "post",
+        url: "https://translearn-check.herokuapp.com/highlight",
+        data: filesData,
+      })
+        .then((res) => {
+          console.log("then block entered.........got some response");
+          // console.log(
+          //   `https://translearn-check.herokuapp.com${
+          //     JSON.parse(res.request.response).highlighted_doc[0]
+          //       .highlighted_doc
+          //   }`
+          // );
+          let highlightedDocs = JSON.parse(res.request.response)
+            .highlighted_doc;
+          console.log(highlightedDocs);
+          // let arr = [...ress];
+          // setFiles(highlightedDocs.map(doc => {
+          //   {highlighted_doc: doc.highlighted_doc, status: doc.status}
+          // }));
+          setFiles(highlightedDocs);
+          // console.log(files);
+          // console.log(arr);
+          console.log("then finished..........got response");
+        })
+        .catch((err) => console.log(err));
+
+      // only update if we are still mounted
+      if (isMounted.current) {
+        console.log("setting sending request to false");
+        setIsSendingRequest(false);
+      }
+    },
+    [isSendingRequest]
+  );
+
+  function fileNames() {
+    const { current } = fileInput;
+
+    if (current && current.files.length > 0) {
+      let messages = [];
+      for (let file of current.files) {
+        messages = messages.concat(<p key={file.name}>{file.name}</p>);
+      }
+      return messages;
+    }
+    return null;
+  }
   return (
     <Fragment>
-      <input accept="image/*" id="contained-button-file" multiple type="file" />
+      {/* <input accept="image/*" id="contained-button-file" multiple type="file" />
       <label htmlFor="contained-button-file">
         <Button variant="contained" color="primary" component="span">
           Upload
         </Button>
-      </label>
+      </label> */}
+      {/* <FileInput /> */}
+      <form>
+        <input
+          id="file"
+          type="file"
+          ref={fileInput}
+          // The onChange should trigger updates whenever
+          // the value changes?
+          // Try to select a file, then try selecting another one.
+          // onChange={forceUpdate}
+          multiple
+        />
+        <label htmlFor="file">
+          <span tabIndex="0" role="button" aria-controls="filename">
+            Upload file(s):{" "}
+          </span>
+        </label>
+        {fileNames()}
+        {files.map((file) => {
+          return (
+            <div>
+              <a
+                href={`https://translearn-check.herokuapp.com${file.highlighted_doc}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {file.status}
+              </a>
+            </div>
+          );
+        })}
+        <br />
+        <button type="submit" onClick={onSubmit}>
+          Submit
+        </button>
+      </form>
     </Fragment>
   );
 }
