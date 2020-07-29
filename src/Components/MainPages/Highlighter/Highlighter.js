@@ -1,3 +1,6 @@
+// SEE FROM LINE NUMBER 104 FOR API REQUEST
+
+
 // import React, { useState, useEffect, Fragment } from "react";
 // import axios from "axios";
 // import { Button } from "@material-ui/core";
@@ -101,14 +104,12 @@ function Highlighter() {
   useEffect(() => {
     console.log("inside useeffect");
     let filesData = new FormData();
-    filesData.append("files", "./SDE-PROBLEMS.pdf");
-    filesData.append("files", "./XDShortcuts.pdf");
+    
+    // idhar append kari files
+    filesData.append("files", pdf);
+    filesData.append("files", pdf2);
     filesData.append("ratio", "0.1");
-    // let reqOptions = {
-    //   method: "POST",
-    //   body: filesData,
-    //   redirect: "follow",
-    // };
+    
     axios({
       method: "post",
       headers: { "Content-Type": undefined },
@@ -121,6 +122,13 @@ function Highlighter() {
         console.log("then finished..........got response");
       })
       .catch((err) => console.log(err));
+    
+    // ye fetch api vala hai......usse bhi try kara tha
+    // let reqOptions = {
+    //   method: "POST",
+    //   body: filesData,
+    //   redirect: "follow",
+    // };
     // fetch("https://translearn-check.herokuapp.com/highlight", reqOptions)
     //   .then((response) => response.text())
     //   .then((result) => console.log(result))
